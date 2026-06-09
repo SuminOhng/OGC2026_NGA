@@ -1,0 +1,4 @@
+interface:
+  display_name: "OGC Caveman"
+  short_description: "Simplify solver ideas into robust checks."
+  default_prompt: "Use this skill to simplify OGC solver ideas, find blunt baselines, expose hidden assumptions, and design quick sanity checks before or after coding."

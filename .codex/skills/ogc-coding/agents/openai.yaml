@@ -1,0 +1,4 @@
+interface:
+  display_name: "OGC Coding"
+  short_description: "Implement focused OGC solver code changes."
+  default_prompt: "Use this skill to write, refactor, or test OGC solver code while preserving the submission entrypoint and local validation flow."

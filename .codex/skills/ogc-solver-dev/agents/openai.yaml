@@ -1,0 +1,4 @@
+interface:
+  display_name: "OGC Solver Dev"
+  short_description: "Develop and validate the OGC solver submission."
+  default_prompt: "Use this skill when modifying myalgorithm.py, ogc_solver internals, submission packaging, or local feasibility experiments for this OGC 2026 solver repo."

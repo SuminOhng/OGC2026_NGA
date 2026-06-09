@@ -1,0 +1,5 @@
+{
+  "strategy": "sequential_empty_bay",
+  "sort_blocks": "due_date",
+  "log": false
+}
