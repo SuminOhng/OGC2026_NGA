@@ -33,6 +33,13 @@ def main() -> None:
     solution = algorithm(prob_info, args.timelimit)
     elapsed = time.time() - started_at
     result = check_feasibility(prob_info, solution)
+    objective = result.get("objective")
+    obj1 = result.get("obj1")
+    obj2 = result.get("obj2")
+    obj3 = result.get("obj3")
+    obj1_share = None
+    if objective not in (None, 0) and obj1 is not None:
+        obj1_share = prob_info.get("weights", {}).get("w1", 1.0) * obj1 / objective
 
     print(
         json.dumps(
@@ -41,7 +48,11 @@ def main() -> None:
                 "elapsed": round(elapsed, 3),
                 "feasible": result["feasible"],
                 "stage": result["stage"],
-                "objective": result.get("objective"),
+                "objective": objective,
+                "obj1": obj1,
+                "obj2": obj2,
+                "obj3": obj3,
+                "obj1_share": obj1_share,
             },
             indent=2,
         )
