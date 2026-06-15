@@ -24,6 +24,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("instance", type=Path)
     parser.add_argument("--timelimit", type=float, default=60.0)
+    parser.add_argument("--save-solution", type=Path, default=None)
     args = parser.parse_args()
 
     with args.instance.open(encoding="utf-8") as handle:
@@ -33,6 +34,10 @@ def main() -> None:
     solution = algorithm(prob_info, args.timelimit)
     elapsed = time.time() - started_at
     result = check_feasibility(prob_info, solution)
+    if args.save_solution is not None:
+        args.save_solution.parent.mkdir(parents=True, exist_ok=True)
+        with args.save_solution.open("w", encoding="utf-8") as handle:
+            json.dump(solution, handle)
     objective = result.get("objective")
     obj1 = result.get("obj1")
     obj2 = result.get("obj2")
