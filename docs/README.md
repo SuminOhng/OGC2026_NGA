@@ -11,11 +11,14 @@ known results, or training-specific block IDs based on anything in this folder.
 ## Recommended Reading Order
 
 1. `objective_analysis.md`
-2. `objective_improvement_experiments.md`
-3. `decomposition_alns_experiments.md`
-4. `long_horizon_alns_experiments.md`
-5. `obj1_reduction_experiments.md`
-6. `fast_feasibility_oracle_plan.md`
+2. `blocker_graph_schedule_evaluator.md`
+3. `objective_improvement_experiments.md`
+4. `decomposition_alns_experiments.md`
+5. `long_horizon_alns_experiments.md`
+6. `obj1_reduction_experiments.md`
+7. `fast_feasibility_oracle_plan.md`
+8. `related_research_insights.md`
+9. `improvement_opportunity_analysis.md`
 
 ## Current Interpretation
 

@@ -21,7 +21,9 @@ from ..stabilize import stabilize_solution
 from ..subsolvers import (
     build_edd_master_seed,
     build_hierarchical_seed,
+    cp_sat_available,
     early_exit_protection_removal,
+    reschedule_fixed_placements_cp_sat,
     should_run_schedule_polish,
 )
 
@@ -78,7 +80,10 @@ def solve_alns(
         objective=fallback_result.get("objective"),
     )
 
+    cp_schedule_polish_enabled = _should_run_cp_schedule_polish(prob_info, total_budget)
     reserve_seconds = max(0.25, min(12.0, (deadline - time.monotonic()) * 0.02))
+    if cp_schedule_polish_enabled:
+        reserve_seconds = max(reserve_seconds, _cp_schedule_polish_reserve(total_budget))
     if len(prob_info["blocks"]) >= 150 and total_budget >= 500.0:
         reserve_seconds = max(reserve_seconds, 30.0)
     search_deadline = deadline - reserve_seconds
@@ -93,6 +98,7 @@ def solve_alns(
             n_bays=len(prob_info["bays"]),
             use_internal_seeds=use_internal_seeds,
             large_handoff_mode=large_handoff_mode,
+            cp_schedule_polish_enabled=cp_schedule_polish_enabled,
         )
     if use_internal_seeds and total_budget >= 120.0:
         seed_budget = _seed_phase_budget(total_budget, len(prob_info["blocks"]))
@@ -238,6 +244,61 @@ def solve_alns(
         compressed_result = check_feasibility(prob_info, compressed)
         if compressed_result.get("feasible"):
             best = _better(best, SearchResult(compressed, True, compressed_result["objective"]))
+
+    if cp_schedule_polish_enabled and best.feasible and time.monotonic() < deadline - 6.0:
+        best_result = check_feasibility(prob_info, best.solution)
+        cp_deadline = deadline - 0.35
+        cp_candidate = reschedule_fixed_placements_cp_sat(
+            prob_info,
+            best.solution,
+            cp_deadline,
+            min_seconds=6.0,
+        )
+        if cp_candidate is not None:
+            cp_result = check_feasibility(prob_info, cp_candidate)
+            if cp_result.get("feasible"):
+                cp_search_result = SearchResult(cp_candidate, True, cp_result["objective"])
+                improved = _better(SearchResult(best.solution, True, best_result.get("objective")), cp_search_result)
+                if improved.solution is cp_candidate:
+                    best = cp_search_result
+                    best_result = cp_result
+        if trace_enabled:
+            _trace_alns_event(
+                "cp_schedule_polish",
+                attempted=cp_candidate is not None,
+                objective=best_result.get("objective"),
+                obj1=best_result.get("obj1"),
+                obj2=best_result.get("obj2"),
+                obj3=best_result.get("obj3"),
+                remaining_seconds=deadline - time.monotonic(),
+            )
+
+    if _should_try_opportunistic_cp_schedule_polish(prob_info, total_budget) and best.feasible and time.monotonic() < deadline - 1.2:
+        best_result = check_feasibility(prob_info, best.solution)
+        cp_candidate = reschedule_fixed_placements_cp_sat(
+            prob_info,
+            best.solution,
+            deadline - 0.35,
+            min_seconds=0.75,
+        )
+        if cp_candidate is not None:
+            cp_result = check_feasibility(prob_info, cp_candidate)
+            if cp_result.get("feasible"):
+                cp_search_result = SearchResult(cp_candidate, True, cp_result["objective"])
+                improved = _better(SearchResult(best.solution, True, best_result.get("objective")), cp_search_result)
+                if improved.solution is cp_candidate:
+                    best = cp_search_result
+                    best_result = cp_result
+        if trace_enabled:
+            _trace_alns_event(
+                "opportunistic_cp_schedule_polish",
+                attempted=cp_candidate is not None,
+                objective=best_result.get("objective"),
+                obj1=best_result.get("obj1"),
+                obj2=best_result.get("obj2"),
+                obj3=best_result.get("obj3"),
+                remaining_seconds=deadline - time.monotonic(),
+            )
 
     if best.feasible and time.monotonic() < deadline - 0.5:
         best_result = check_feasibility(prob_info, best.solution)
@@ -398,6 +459,38 @@ def _set_candidate_position_limit(total_budget: float, n_blocks: int) -> None:
         _CANDIDATE_POSITION_LIMIT = 20
     else:
         _CANDIDATE_POSITION_LIMIT = 80
+
+
+def _should_run_cp_schedule_polish(prob_info: dict, total_budget: float) -> bool:
+    import os
+
+    if os.environ.get("OGC_DISABLE_CP_SCHEDULE_POLISH"):
+        return False
+    if total_budget < 75.0:
+        return False
+    if len(prob_info.get("bays", [])) != 2:
+        return False
+    if len(prob_info.get("blocks", [])) > 150 and not os.environ.get("OGC_FORCE_CP_SCHEDULE_POLISH"):
+        return False
+    return cp_sat_available()
+
+
+def _cp_schedule_polish_reserve(total_budget: float) -> float:
+    return min(24.0, max(12.0, total_budget * 0.25))
+
+
+def _should_try_opportunistic_cp_schedule_polish(prob_info: dict, total_budget: float) -> bool:
+    import os
+
+    if os.environ.get("OGC_DISABLE_CP_SCHEDULE_POLISH"):
+        return False
+    if total_budget < 120.0:
+        return False
+    if len(prob_info.get("blocks", [])) > 100:
+        return False
+    if len(prob_info.get("bays", [])) != 3:
+        return False
+    return cp_sat_available()
 
 
 def _seed_phase_budget(total_budget: float, n_blocks: int) -> float:
@@ -7130,7 +7223,6 @@ def _safe_slots(
     limit: int,
 ) -> list[tuple[int, int]]:
     from utils import check_collisions, check_entry, check_exit
-
     existing_entry_times = {entry for entry, _ in schedule}
     candidate_entries = {int(release_time)}
     for placed_block, (entry, exit_time) in zip(placed_blocks, schedule):
