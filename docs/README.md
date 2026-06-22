@@ -12,13 +12,14 @@ known results, or training-specific block IDs based on anything in this folder.
 
 1. `objective_analysis.md`
 2. `blocker_graph_schedule_evaluator.md`
-3. `objective_improvement_experiments.md`
-4. `decomposition_alns_experiments.md`
-5. `long_horizon_alns_experiments.md`
-6. `obj1_reduction_experiments.md`
-7. `fast_feasibility_oracle_plan.md`
-8. `related_research_insights.md`
-9. `improvement_opportunity_analysis.md`
+3. `blocker_aware_placement_order.md`
+4. `objective_improvement_experiments.md`
+5. `decomposition_alns_experiments.md`
+6. `long_horizon_alns_experiments.md`
+7. `obj1_reduction_experiments.md`
+8. `fast_feasibility_oracle_plan.md`
+9. `related_research_insights.md`
+10. `improvement_opportunity_analysis.md`
 
 ## Current Interpretation
 
